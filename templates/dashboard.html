@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEL Command Center | Final</title>
+    <style>
+        :root {
+            --bg-main: #0f1115;
+            --bg-panel: #181b21;
+            --bg-card: #252a33;
+            --text-bright: #ffffff;
+            --text-muted: #8b949e;
+            --c-blue: #2979ff;
+            --c-green: #00e676;
+            --c-orange: #ffea00;
+            --c-red: #ff3d00;
+            --border: 1px solid #2f3640;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-main);
+            color: var(--text-bright);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- TOP KPI RIBBON --- */
+        .top-ribbon {
+            height: 70px; background: var(--bg-panel); border-bottom: var(--border);
+            display: flex; align-items: center; padding: 0 20px; gap: 30px;
+        }
+        .brand { font-size: 20px; font-weight: 800; color: var(--c-blue); letter-spacing: 1px; margin-right: auto; }
+        .kpi-box { display: flex; flex-direction: column; }
+        .kpi-lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+        .kpi-val { font-size: 22px; font-weight: 700; }
+        .alert-badge { background: rgba(255, 61, 0, 0.2); color: var(--c-red); padding: 5px 15px; border-radius: 20px; font-weight: bold; border: 1px solid var(--c-red); animation: pulse 2s infinite; }
+
+        /* --- MAIN LAYOUT --- */
+        .main-grid {
+            flex-grow: 1; display: grid; grid-template-columns: 3fr 1fr; gap: 20px; padding: 20px;
+        }
+
+        /* --- MAP SECTION --- */
+        .map-container {
+            background: #13161a; border-radius: 12px; border: var(--border); position: relative; overflow: hidden;
+            background-image: radial-gradient(#2a2f38 1px, transparent 1px); background-size: 40px 40px;
+        }
+        .map-overlay { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-size: 12px; color: var(--text-muted); }
+
+        /* TRUCK ICONS & TOOLTIPS */
+        .truck-wrapper { position: absolute; transition: all 1s linear; z-index: 10; }
+        .truck-icon {
+            width: 16px; height: 16px; border-radius: 50%; cursor: pointer; position: relative;
+        }
+        /* Status Colors */
+        .t-active .truck-icon { background: var(--c-green); box-shadow: 0 0 10px var(--c-green); }
+        .t-active::after { content: ''; position: absolute; bottom: -20px; left: -10px; width: 4px; height: 20px; background: linear-gradient(to bottom, var(--c-green), transparent); transform: rotate(45deg); opacity: 0.5; }
+        
+        .t-empty .truck-icon { background: var(--bg-main); border: 2px solid var(--text-bright); }
+        
+        .t-warning .truck-icon { background: var(--c-orange); box-shadow: 0 0 15px var(--c-orange); animation: blink 1s infinite; }
+        
+        .t-alert .truck-icon { background: var(--c-red); box-shadow: 0 0 20px var(--c-red); animation: blink 0.5s infinite; }
+
+        .tooltip {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 17, 21, 0.95); border: var(--border); padding: 10px;
+            border-radius: 6px; width: 180px; pointer-events: none; opacity: 0; transition: 0.2s;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .truck-wrapper:hover { z-index: 100; }
+        .truck-wrapper:hover .tooltip { opacity: 1; }
+        
+        .tt-head { font-weight: bold; font-size: 13px; color: var(--c-blue); margin-bottom: 5px; }
+        .tt-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+        .tt-val { font-weight: bold; color: var(--text-bright); }
+        .tt-alert { color: var(--c-red); font-weight: bold; margin-top: 5px; font-size: 11px; }
+
+        /* --- SIDEBAR FEED --- */
+        .sidebar {
+            background: var(--bg-panel); border-radius: 12px; border: var(--border); display: flex; flex-direction: column; overflow: hidden;
+        }
+        .sb-header { padding: 15px; font-weight: 700; border-bottom: var(--border); font-size: 14px; letter-spacing: 1px; }
+        .sb-content { padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+
+        .feed-card {
+            background: var(--bg-card); border-radius: 8px; padding: 15px; border-left: 4px solid #555;
+        }
+        .fc-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        /* AI Card Styles */
+        .ai-card { border-color: var(--c-blue); }
+        .ai-prob { font-size: 24px; font-weight: 800; color: var(--c-green); }
+        .ai-strat { font-size: 11px; color: var(--text-muted); margin-top: 5px; font-style: italic; }
+        .btn-ai { width: 100%; padding: 10px; margin-top: 12px; background: var(--c-blue); border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-ai:hover { background: #1c54b2; }
+
+        /* Alert Card Styles */
+        .alert-card { border-color: var(--c-red); background: rgba(255, 61, 0, 0.05); }
+        .ac-msg { font-weight: bold; color: var(--c-red); font-size: 13px; }
+        .ac-id { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        .warn-card { border-color: var(--c-orange); background: rgba(255, 234, 0, 0.05); }
+        .wc-msg { font-weight: bold; color: var(--c-orange); font-size: 13px; }
+
+        @keyframes blink { 50% { opacity: 0.5; } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,61,0,0.4); } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+    </style>
+</head>
+<body>
+
+    <div class="top-ribbon">
+        <div class="brand">JEL COMMAND CENTER</div>
+        
+        <div class="kpi-box">
+            <span class="kpi-lbl">Utilization</span>
+            <span class="kpi-val" style="color: var(--c-green);"><span id="k-util">--</span>%</span>
+        </div>
+        <div class="kpi-box">
+            <span class="kpi-lbl">Empty Rate</span>
+            <span class="kpi-val"><span id="k-empty">--</span>%</span>
+        </div>
+        <div class="kpi-box">
+            <span class="kpi-lbl">Est. Revenue</span>
+            <span class="kpi-val" id="k-rev">₹--</span>
+        </div>
+        
+        <div class="alert-badge">
+            🔔 <span id="k-alerts">0</span> Critical Events
+        </div>
+    </div>
+
+    <div class="main-grid">
+        
+        <div class="map-container" id="map-stage">
+            <div class="map-overlay">SATELLITE LINK: ACTIVE | RANCHI-KOLKATA CORRIDOR</div>
+            </div>
+
+        <div class="sidebar">
+            <div class="sb-header">LIVE ACTION FEED</div>
+            <div class="sb-content" id="feed-container">
+                <div class="feed-card ai-card">
+                    <div class="fc-title" style="color: var(--c-blue);">
+                        <span>AI FREIGHT MATCHER</span>
+                        <span>Kolkata Return</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <span class="kpi-lbl">Probability</span><br>
+                            <span class="ai-prob" id="ai-prob">--%</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="kpi-lbl">Rec. Offer</span><br>
+                            <span class="kpi-val" id="ai-price">₹--</span>
+                        </div>
+                    </div>
+                    <div class="ai-strat" id="ai-strat">AI Strategy: Analyzing market data...</div>
+                    <button class="btn-ai">ACCEPT & DISPATCH</button>
+                </div>
+
+                <div id="dynamic-alerts"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:5000/api/fleet-data";
+
+        async function refreshDashboard() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+
+                // 1. UPDATE TOP KPIs
+                document.getElementById('k-util').innerText = data.kpis.utilization;
+                document.getElementById('k-empty').innerText = data.kpis.empty_rate;
+                document.getElementById('k-rev').innerText = data.kpis.revenue;
+                document.getElementById('k-alerts').innerText = data.kpis.alerts;
+
+                // 2. UPDATE MAP (Clear and Redraw)
+                const mapStage = document.getElementById('map-stage');
+                // Keep overlay, remove old trucks
+                Array.from(mapStage.children).forEach(child => {
+                    if(!child.classList.contains('map-overlay')) child.remove();
+                });
+
+                data.fleet.forEach(t => {
+                    // Wrapper for positioning
+                    const wrap = document.createElement('div');
+                    wrap.className = `truck-wrapper t-${t.status}`;
+                    wrap.style.left = t.lng + "%";
+                    wrap.style.top = t.lat + "%";
+
+                    // The visual icon
+                    const icon = document.createElement('div');
+                    icon.className = 'truck-icon';
+
+                    // The Tooltip (Telematics Data)
+                    const tip = document.createElement('div');
+                    tip.className = 'tooltip';
+                    tip.innerHTML = `
+                        <div class="tt-head">${t.id}</div>
+                        <div class="tt-row"><span>Speed:</span><span class="tt-val">${t.speed} km/h</span></div>
+                        <div class="tt-row"><span>Fuel:</span><span class="tt-val">${t.fuel.toFixed(1)} L</span></div>
+                        <div style="margin: 4px 0; border-bottom: 1px solid #333;"></div>
+                        <div class="tt-row"><span>Temp:</span><span class="tt-val">${t.temp}°C</span></div>
+                        <div class="tt-row"><span>Vibration:</span><span class="tt-val">${t.vib.toFixed(2)} G</span></div>
+                        ${t.alert_msg ? `<div class="tt-alert">${t.alert_msg}</div>` : ''}
+                    `;
+
+                    wrap.appendChild(icon);
+                    wrap.appendChild(tip);
+                    mapStage.appendChild(wrap);
+                });
+
+                // 3. UPDATE SIDEBAR FEED
+                // Update AI Card
+                document.getElementById('ai-prob').innerText = data.ai_freight['Backhaul Probability'];
+                document.getElementById('ai-price').innerText = data.ai_freight['AI Recommended Offer'];
+                document.getElementById('ai-strat').innerText = data.ai_freight['Strategy'];
+
+                // Inject Dynamic Alerts (Modules B & C)
+                const alertContainer = document.getElementById('dynamic-alerts');
+                alertContainer.innerHTML = ''; // Clear old alerts
+
+                // Filter for trucks with active alerts/warnings
+                const activeIssues = data.fleet.filter(t => t.status === 'alert' || t.status === 'warning');
+                
+                activeIssues.forEach(t => {
+                    const isCritical = t.status === 'alert';
+                    const card = document.createElement('div');
+                    card.className = `feed-card ${isCritical ? 'alert-card' : 'warn-card'}`;
+                    card.innerHTML = `
+                        <div class="fc-title" style="color: var(--c-${isCritical ? 'red' : 'orange'});">
+                            ${isCritical ? 'SECURITY BREACH' : 'MAINTENANCE INSIGHT'}
+                        </div>
+                        <div class="${isCritical ? 'ac-msg' : 'wc-msg'}">${t.alert_msg}</div>
+                        <div class="ac-id">Unit: ${t.id} | Loc: ${t.lat.toFixed(2)}, ${t.lng.toFixed(2)}</div>
+                        <button class="btn-ai" style="background: var(--c-${isCritical ? 'red' : 'orange'}); margin-top:8px; font-size: 11px; padding: 6px;">
+                            ${isCritical ? 'INITIATE LOCKDOWN' : 'SCHEDULE SERVICE'}
+                        </button>
+                    `;
+                    alertContainer.appendChild(card);
+                });
+
+
+            } catch (e) { console.error("Connection lost:", e); }
+        }
+
+        // Main Loop: Run every 1.5 seconds
+        setInterval(refreshDashboard, 1500);
+        refreshDashboard(); // Initial call
+    </script>
+</body>
+</html>
